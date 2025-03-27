@@ -1,4 +1,3 @@
-import motors
+import hardware
 
-motors.init_outputs()
-motors.motorborad_forward()
+
