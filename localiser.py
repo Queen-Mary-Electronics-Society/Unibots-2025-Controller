@@ -23,7 +23,8 @@ camera_params = pickle.load(open("camera_params.pkl"))
 def generate_tag_positions():
     # our reference point is North-West corner
     # East is positive x
-    # South is positive y
+    # South is positive z
+    # Up is positive y
     # all units are in METERS
 
     wall_size = 2.00 # in meters
@@ -32,10 +33,10 @@ def generate_tag_positions():
     tags_per_island = 3
 
     directions = np.array([
-        [1, 0],
-        [0, 1],
-        [-1, 0],
-        [0, -1],
+        [1, 0, 0],
+        [0, 0, 1],
+        [-1, 0, 0],
+        [0, 0, -1],
     ])
 
     corners = directions * wall_size
