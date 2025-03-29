@@ -15,7 +15,7 @@ at_detector = Detector(
    debug=0
 )
 
-camera_params = pickle.load(open("tools/camera_params.pkl", 'rb'))
+camera_params = pickle.load(open("camera_params.pkl", 'rb'))
 
 def detect_tags(frame, camera_matrix):
     # frame conversion and undistortion
@@ -47,7 +47,7 @@ def draw_tags(frame, detections: list[Detection]):
 
         # draw info
         text = f"id: {detection.tag_id}\n"
-        text += f"pos: {detection.pose_t}"
+        text += f"pos: {detection.pose_R @ np.array([0, 0, 1])}"
 
         anchor_point = pts[0,0]
         line_spacing = 40

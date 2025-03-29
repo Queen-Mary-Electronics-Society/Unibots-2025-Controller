@@ -1,9 +1,0 @@
-# hardware imports
-gpiozero
-
-# analysis requirements
-torch
-ultralytics
-numpy < 2
-opencv-python
-pupil-apriltags
