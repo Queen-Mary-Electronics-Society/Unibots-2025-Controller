@@ -79,12 +79,20 @@ import cv2 as cv
 #         # 50 Hz (20 ms PWM period)
 #         self.pwm = GPIO.PWM(pin, 50)
 #         self.pwm.start(7)
+    
+#     def max(self):
+#         self.pwm.ChangeDutyCycle(12.0) # rotate to 180 degrees
 
+#     """
+#     rotate to 90 degrees
+#     """
 #     def up(self):
-#         self.pwm.ChangeDutyCycle(7.0) # rotate to 180 degrees
+#         self.pwm.ChangeDutyCycle(7.0) 
 
+
+#     # Zero the servo
 #     def down(self):
-#         self.pwm.ChangeDutyCycle(2.0)
+#         self.pwm.ChangeDutyCycle(2.0) 
 
 # motors = Motors(25, 24, 23, 11, 10, 9)
 # servo = Servo(17)
