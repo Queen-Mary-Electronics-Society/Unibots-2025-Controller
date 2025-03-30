@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 import cv2 as cv
 import numpy as np
 import math
@@ -26,6 +26,8 @@ DEBUG = True
 # in parking mode, the robot rotates to detect the position of the home tags, and moves 
 # to them trying to keep them at the centre
 # once it got close enough to them, it shutdowns
+
+ROUND_TIME = 2*60 + 30 # in seconds
 
 BALL_APPROACH_SPEED = ...
 BALL_CAPTURE_SPEED = ...
@@ -187,7 +189,15 @@ def debug_ball_display(frame):
     cv.waitKey(10)
 
 def main():
+    input("press any key to start")
+    start_time = time()
+
     while True:
+        # check if round ended
+        if (time() - start_time) > ROUND_TIME:
+            print("TIMEOUT")
+            break
+
         frame = camera.get_undistorted_frame()
 
         if frame is None:
