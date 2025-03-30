@@ -10,6 +10,7 @@ def main():
     servo.up()
     # go forward
     motors.speed(SPEED)
+    motors.forward()
     sleep(FORWARD_DELAY)
 
     # close gate
