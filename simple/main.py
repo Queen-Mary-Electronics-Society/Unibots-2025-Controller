@@ -3,8 +3,8 @@ import cv2 as cv
 import numpy as np
 import math
 
-from hardware import motors, servo, camera
-from target_detector import detect_targets, Target
+from debug_hardware import motors, servo, camera
+from target_detector_alt import detect_targets, Target
 
 DEBUG = True
 
@@ -80,7 +80,7 @@ def get_angle_distance_to_ball(target: Target):
             [mean_x, target.y2],
         ], dtype=np.float32)
 
-    _, _, tvec = cv.solvePnP(obj_points, img_points, camera_matrix, np.zeros((4, 1)))
+    _, _, tvec = cv.solvePnP(obj_points, img_points, camera_matrix, np.zeros((4, 1)), flags=cv.SOLVEPNP_ITERATIVE)
 
     distance = np.linalg.norm(tvec)
     tx, ty, tz = tvec
