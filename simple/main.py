@@ -1,6 +1,7 @@
 from time import sleep
 import cv2 as cv
 import numpy as np
+import math
 
 from hardware import motors, servo, camera
 from target_detector import detect_targets, Target
@@ -26,10 +27,12 @@ from target_detector import detect_targets, Target
 
 BALL_APPROACH_SPEED = ...
 BALL_CAPTURE_SPEED = ...
+ALIGN_SPEED = ...
 CAPTURE_DELAY = 1 # in s
 
 BALL_CAPTURE_DISTANCE = 2 # in m?
 ALIGN_TRIGGER_THRESHOLD = 0.4 # in rads?
+ALIGN_DEACTIVATION_THRESHOLD = 0.1 # in rads?
 
 PING_PONG_RADIUS = ... # in m
 RUGBY_HEIGHT = ... # in m
@@ -72,11 +75,28 @@ def get_angle_distance_to_ball(target: Target):
             [mean_x, target.y2],
         )
 
-    ret, r_vec, t_vec = cv.solvePnP(obj_points, img_points, camera_matrix, np.zeros((4, 1)))
-    
+    _, _, tvec = cv.solvePnP(obj_points, img_points, camera_matrix, np.zeros((4, 1)))
+
+    distance = np.linalg.norm(tvec)
+    tx, ty, tz = tvec
+    bearing = math.atan2(tx, tz)
+
+    return bearing, distance
 
 def find_best_ball(targets):
-    pass
+    # get the closest ball and most central ball
+    min_score = math.inf
+    best_ball = None
+    for target in targets:
+        angle, dist = get_angle_distance_to_ball(target)
+
+        score = dist + abs(angle)
+        if score < min_score:
+            min_score = score
+            best_ball = target
+    
+    return best_ball
+
 
 def capture_action():
     servo.up()
@@ -89,8 +109,19 @@ def capture_action():
     # FIXME: maybe a delay here
     motors.stop()
 
-def align() -> bool:
-    pass
+def align(angle) -> bool:
+    # FIXME: we need to know the direction of the angle
+    motors.speed(ALIGN_SPEED)
+
+    if abs(angle) < ALIGN_DEACTIVATION_THRESHOLD:
+        return False
+    
+    if angle > 0:
+        motors.right()
+    else:
+        motors.left()
+
+    return True
 
 is_aligning = False
 
