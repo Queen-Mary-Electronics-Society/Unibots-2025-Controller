@@ -6,6 +6,8 @@ import math
 from hardware import motors, servo, camera
 from target_detector import detect_targets, Target
 
+DEBUG = True
+
 # question is: our ball model runs at 1 fps best case,
 # how will we be able to do any realtime control with it?
 # will go slowly??
@@ -28,14 +30,15 @@ from target_detector import detect_targets, Target
 BALL_APPROACH_SPEED = ...
 BALL_CAPTURE_SPEED = ...
 ALIGN_SPEED = ...
+DISCOVERY_SPEED = ...
 CAPTURE_DELAY = 1 # in s
 
-BALL_CAPTURE_DISTANCE = 2 # in m?
-ALIGN_TRIGGER_THRESHOLD = 0.4 # in rads?
-ALIGN_DEACTIVATION_THRESHOLD = 0.1 # in rads?
+BALL_CAPTURE_DISTANCE = 0.3 # in m?
+ALIGN_TRIGGER_THRESHOLD = 0.1 # in rads?
+ALIGN_DEACTIVATION_THRESHOLD = 0.03 # in rads?
 
-PING_PONG_RADIUS = ... # in m
-RUGBY_HEIGHT = ... # in m
+PING_PONG_RADIUS = 0.020 # in m
+RUGBY_HEIGHT = 0.315 / 4 # in m
 
 ping_pong_points = np.array([
     [-1, -1, 0],  # Top-left corner
@@ -46,7 +49,7 @@ ping_pong_points = np.array([
 
 rugby_points = np.array([
     [0, -1, 0],  # Top-center
-    [0, 0, 0]    # Middle
+    [0, 0, 0],    # Middle
     [0, 1, 0],    # Bottom-center
 ], dtype=np.float32) * RUGBY_HEIGHT / 2
 
@@ -56,7 +59,7 @@ def get_angle_distance_to_ball(target: Target):
     # FIXME: classnames are different
     obj_points = None
     img_points = None
-    if target.class_name == "ping-pong":
+    if target.class_name == "ping-pong-ball":
         obj_points = ping_pong_points
         # FIXME: maybe incorrect direction
         img_points = np.array([
@@ -64,16 +67,16 @@ def get_angle_distance_to_ball(target: Target):
             [target.x2, target.y1],
             [target.x2, target.y2],
             [target.x1, target.y2],
-        ])
-    if target.class_name == "rugby":
+        ], dtype=np.float32)
+    if target.class_name == "rugby-balls":
         obj_points = rugby_points
-        mean_x = int((target.x1 + target.x2) / 2)
-        mean_y = int((target.y1 + target.y2) / 2)
-        img_points = np.array(
+        mean_x = (target.x1 + target.x2) / 2
+        mean_y = (target.y1 + target.y2) / 2
+        img_points = np.array([
             [mean_x, target.y1],
             [mean_x, mean_y],
             [mean_x, target.y2],
-        )
+        ], dtype=np.float32)
 
     _, _, tvec = cv.solvePnP(obj_points, img_points, camera_matrix, np.zeros((4, 1)))
 
@@ -99,6 +102,7 @@ def find_best_ball(targets):
 
 
 def capture_action():
+    print("CAPTURE")
     servo.up()
     # FIXME: maybe add a delay here? and stopping
     motors.speed(BALL_CAPTURE_SPEED)
@@ -110,6 +114,7 @@ def capture_action():
     motors.stop()
 
 def align(angle) -> bool:
+    print("ALIGN")
     # FIXME: we need to know the direction of the angle
     motors.speed(ALIGN_SPEED)
 
@@ -125,6 +130,16 @@ def align(angle) -> bool:
 
 is_aligning = False
 
+def discovery():
+    print("DISCOVERY")
+    motors.speed(DISCOVERY_SPEED)
+    motors.left()
+
+def approach():
+    print("APPROACH")
+    motors.speed(BALL_APPROACH_SPEED)
+    motors.forward()
+
 def ball_collection_stage(frame):
     global is_aligning
 
@@ -132,7 +147,12 @@ def ball_collection_stage(frame):
 
     # find the closest ball to the center
     target = find_best_ball(targets)
-    
+
+    if target is None:
+        # discovery mode
+        discovery()
+        return
+
     # find the angle and the distance
     angle, distance = get_angle_distance_to_ball(target)
 
@@ -148,8 +168,23 @@ def ball_collection_stage(frame):
         is_aligning = align(angle)
     else:
         # otherwise, move forward
-        motors.speed(BALL_APPROACH_SPEED)
-        motors.forward()
+        approach()
+
+def debug_ball_display(frame):
+    if not DEBUG:
+        return
+    
+    targets = detect_targets(frame)
+    colour = (0, 255, 0)
+
+    for target in targets:
+        angle, distance = get_angle_distance_to_ball(target)
+
+        cv.rectangle(frame, (target.x1, target.y1), (target.x2, target.y2), colour, 2)
+        cv.putText(frame, f'{target.class_name} ang: {angle:.2f} dist: {distance:.4f}', (target.x1, target.y1), cv.FONT_HERSHEY_SIMPLEX, 1, colour, 2)
+    
+    cv.imshow("preview", frame)
+    cv.waitKey(10)
 
 def main():
     while True:
@@ -159,5 +194,6 @@ def main():
             continue
 
         ball_collection_stage(frame)
+        debug_ball_display(frame)
 
 main()

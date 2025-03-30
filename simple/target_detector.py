@@ -39,4 +39,4 @@ def detect_targets(frame) -> list[Target]:
             target = Target(x1, y1, x2, y2, class_name)
             targets.append(target)
     
-    return target
+    return targets
