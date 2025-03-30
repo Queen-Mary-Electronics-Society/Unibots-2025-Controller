@@ -1,7 +1,7 @@
 import cv2 as cv
 
-from hardware import camera
-from target_detector import detect_targets
+from hardware import motors, servo, camera
+from target_detector import detect_targets, Target
 
 # question is: our ball model runs at 1 fps best case,
 # how will we be able to do any realtime control with it?
@@ -22,41 +22,9 @@ from target_detector import detect_targets
 # to them trying to keep them at the centre
 # once it got close enough to them, it shutdowns
 
-CONFIDENCE_LEVEL = 0.4
-
 def ball_collection(frame):
     results = detect_targets(frame)
-
-    for result in results:
-        classes_names = result.names
-
-        for box in result.boxes:
-            # check if confidence is greater than 40 percent
-            if box.conf[0] < CONFIDENCE_LEVEL:
-                continue
-
-            # get coordinates
-            [x1, y1, x2, y2] = box.xyxy[0]
-            # convert to int
-            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-
-            # get the class
-            cls = int(box.cls[0])
-
-            # get the class name
-            class_name = classes_names[cls]
-
-            # get the respective colour
-            colour = (255, 0, 0)
-
-            # draw the rectangle
-            cv.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
-
-            # put the class name and confidence on the image
-            cv.putText(frame, f'{classes_names[int(box.cls[0])]} {box.conf[0]:.2f}', (x1, y1), cv.FONT_HERSHEY_SIMPLEX, 1, colour, 2)
-        
-        cv.imshow('preview', frame)
-        cv.waitKey(20)
+    
     
 def main():
     while True:
