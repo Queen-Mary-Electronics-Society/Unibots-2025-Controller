@@ -1,4 +1,6 @@
+from time import sleep
 import cv2 as cv
+import numpy as np
 
 from hardware import motors, servo, camera
 from target_detector import detect_targets, Target
@@ -22,17 +24,109 @@ from target_detector import detect_targets, Target
 # to them trying to keep them at the centre
 # once it got close enough to them, it shutdowns
 
-def ball_collection(frame):
-    results = detect_targets(frame)
+BALL_APPROACH_SPEED = ...
+BALL_CAPTURE_SPEED = ...
+CAPTURE_DELAY = 1 # in s
+
+BALL_CAPTURE_DISTANCE = 2 # in m?
+ALIGN_TRIGGER_THRESHOLD = 0.4 # in rads?
+
+PING_PONG_RADIUS = ... # in m
+RUGBY_HEIGHT = ... # in m
+
+ping_pong_points = np.array([
+    [-1, -1, 0],  # Top-left corner
+    [1, -1, 0],   # Top-right corner
+    [1, 1, 0],    # Bottom-right corner
+    [-1, 1, 0]    # Bottom-left corner
+], dtype=np.float32) * PING_PONG_RADIUS
+
+rugby_points = np.array([
+    [0, -1, 0],  # Top-center
+    [0, 0, 0]    # Middle
+    [0, 1, 0],    # Bottom-center
+], dtype=np.float32) * RUGBY_HEIGHT / 2
+
+def get_angle_distance_to_ball(target: Target):
+    camera_matrix = camera.get_matrix()
     
+    # FIXME: classnames are different
+    obj_points = None
+    img_points = None
+    if target.class_name == "ping-pong":
+        obj_points = ping_pong_points
+        # FIXME: maybe incorrect direction
+        img_points = np.array([
+            [target.x1, target.y1],
+            [target.x2, target.y1],
+            [target.x2, target.y2],
+            [target.x1, target.y2],
+        ])
+    if target.class_name == "rugby":
+        obj_points = rugby_points
+        mean_x = int((target.x1 + target.x2) / 2)
+        mean_y = int((target.y1 + target.y2) / 2)
+        img_points = np.array(
+            [mean_x, target.y1],
+            [mean_x, mean_y],
+            [mean_x, target.y2],
+        )
+
+    ret, r_vec, t_vec = cv.solvePnP(obj_points, img_points, camera_matrix, np.zeros((4, 1)))
     
+
+def find_best_ball(targets):
+    pass
+
+def capture_action():
+    servo.up()
+    # FIXME: maybe add a delay here? and stopping
+    motors.speed(BALL_CAPTURE_SPEED)
+    motors.forward()
+
+    sleep(CAPTURE_DELAY)
+    servo.down()
+    # FIXME: maybe a delay here
+    motors.stop()
+
+def align() -> bool:
+    pass
+
+is_aligning = False
+
+def ball_collection_stage(frame):
+    global is_aligning
+
+    targets = detect_targets(frame)
+
+    # find the closest ball to the center
+    target = find_best_ball(targets)
+    
+    # find the angle and the distance
+    angle, distance = get_angle_distance_to_ball(target)
+
+    
+    if is_aligning:
+        # if already started aligning, continue
+        is_aligning = align(angle)
+    elif distance < BALL_CAPTURE_DISTANCE:
+        # if the ball is close enough, go into capture mode
+        capture_action()
+    elif abs(angle) > ALIGN_TRIGGER_THRESHOLD:
+        # if the angle is larger then threshold, align
+        is_aligning = align(angle)
+    else:
+        # otherwise, move forward
+        motors.speed(BALL_APPROACH_SPEED)
+        motors.forward()
+
 def main():
     while True:
-        res, frame = camera.read()
+        frame = camera.get_undistorted_frame()
 
-        if not res:
+        if frame is None:
             continue
 
-        ball_collection(frame)
+        ball_collection_stage(frame)
 
 main()
