@@ -3,7 +3,7 @@ from ultralytics import YOLO
 
 from utils import Location
 
-MODEL_FILE = "real-world-detector.pt"
+MODEL_FILE = "real-world-detector_ncnn_model"
 
 class TargetDetector:
     def __init__(self, camera_matrix):
